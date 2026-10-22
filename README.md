@@ -1,4 +1,4 @@
-# 🧬 CADD Tools Tracker
+# CADD Tools Tracker
 
 A living, auto-updating web database of **open-source computational medicinal chemistry tools** — searchable, filterable, and automatically scanned for new publications weekly.
 
@@ -8,13 +8,13 @@ A living, auto-updating web database of **open-source computational medicinal ch
 
 | Feature | Details |
 |---|---|
-| 📋 **Searchable database** | 70+ tools with full metadata |
-| 🔍 **Smart filters** | Category, year, molecule type, free-text search |
-| ⬇️ **Export** | Download as Excel or CSV with one click |
-| 🔬 **Tool detail view** | Full info, links to DOI and GitHub |
-| 🕐 **Pending review queue** | Human-in-the-loop approval for auto-detected tools |
-| 🤖 **Auto-scan** | Weekly PubMed + CrossRef scan via GitHub Actions |
-| 📊 **Statistics** | Category breakdown, year trends, pipeline coverage |
+|  **Searchable database** | 70+ tools with full metadata |
+|  **Smart filters** | Category, year, molecule type, free-text search |
+|  **Export** | Download as Excel or CSV with one click |
+|  **Tool detail view** | Full info, links to DOI and GitHub |
+|  **Pending review queue** | Human-in-the-loop approval for auto-detected tools |
+|  **Auto-scan** | Weekly PubMed + CrossRef scan via GitHub Actions |
+|  **Statistics** | Category breakdown, year trends, pipeline coverage |
 
 ---
 
