@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+.claude/
+data/tools.json.backup
+data/scan_history.json
+data/pageviews.json
+LOGO.png
+SciLifeLab_symbol_green-2048x1950-2.png
+icon.png
