@@ -6,16 +6,19 @@ Rendered inline from app.py as ?section=tools
 import json
 import datetime
 import os
+from datetime import datetime as _dt
 from pathlib import Path
 from collections import Counter
 
 import pandas as pd
 import streamlit as st
 
-DATA_DIR     = Path(__file__).parent.parent / "data"
-TOOLS_FILE   = DATA_DIR / "tools.json"
-PENDING_FILE = DATA_DIR / "pending.json"
-HISTORY_FILE = DATA_DIR / "scan_history.json"
+DATA_DIR        = Path(__file__).parent.parent / "data"
+TOOLS_FILE      = DATA_DIR / "tools.json"
+PENDING_FILE    = DATA_DIR / "pending.json"
+HISTORY_FILE    = DATA_DIR / "scan_history.json"
+BOOKMARKS_FILE  = DATA_DIR / "bookmarks.json"
+NOTES_FILE      = DATA_DIR / "team_notes.json"
 
 # ── Resource-type classification ──────────────────────────────────────────────
 RESOURCE_TYPES = {
@@ -213,6 +216,26 @@ def _load_history():
 def _save_json(path, data):
     with open(path, "w") as f:
         json.dump(data, f, indent=2, default=str)
+
+
+def _load_bookmarks() -> list:
+    if not BOOKMARKS_FILE.exists():
+        return []
+    return json.loads(BOOKMARKS_FILE.read_text()).get("bookmarks", [])
+
+
+def _save_bookmarks(bm: list) -> None:
+    BOOKMARKS_FILE.write_text(json.dumps({"bookmarks": bm}, indent=2))
+
+
+def _load_notes() -> dict:
+    if not NOTES_FILE.exists():
+        return {}
+    return json.loads(NOTES_FILE.read_text())
+
+
+def _save_notes(notes: dict) -> None:
+    NOTES_FILE.write_text(json.dumps(notes, indent=2, default=str))
 
 
 def _apply_filters(
@@ -556,6 +579,70 @@ def render() -> None:
                     f'{tool.get("category","")}</div>',
                     unsafe_allow_html=True,
                 )
+
+                # ── Bookmark (Our Stack) ──────────────────────────────────
+                st.markdown('<div class="sec-label" style="margin-top:1rem;">Our Stack</div>',
+                            unsafe_allow_html=True)
+                _bm = _load_bookmarks()
+                _tool_name = tool.get("tool_name", "")
+                _is_bm = _tool_name in _bm
+                if _is_bm:
+                    if st.button("Remove from Our Stack", key="bm_remove",
+                                 use_container_width=True):
+                        _bm.remove(_tool_name)
+                        _save_bookmarks(_bm)
+                        st.rerun()
+                else:
+                    if st.button("Add to Our Stack", key="bm_add",
+                                 type="primary", use_container_width=True):
+                        _bm.append(_tool_name)
+                        _save_bookmarks(_bm)
+                        st.rerun()
+
+            # ── Team Notes ───────────────────────────────────────────────
+            st.markdown('<div class="sec-label" style="margin-top:1rem;">Team Notes</div>',
+                        unsafe_allow_html=True)
+            _notes_all = _load_notes()
+            _tool_notes = _notes_all.get(tool.get("tool_name", ""), [])
+
+            if _tool_notes:
+                for _n in _tool_notes:
+                    st.markdown(
+                        f'<div style="background:#f9fafb;border:1px solid #e5e7eb;'
+                        f'border-radius:6px;padding:0.55rem 0.85rem;margin-bottom:0.4rem;">'
+                        f'<span style="font-size:0.72rem;font-weight:600;color:#374151;">'
+                        f'{_n.get("user","?")} &nbsp;·&nbsp; '
+                        f'<span style="font-weight:400;color:#9ca3af;">{_n.get("ts","")}</span></span><br>'
+                        f'<span style="font-size:0.85rem;color:#1B3144;">{_n.get("note","")}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.markdown(
+                    '<div style="font-size:0.82rem;color:#9ca3af;">No notes yet.</div>',
+                    unsafe_allow_html=True,
+                )
+
+            with st.expander("Add a note"):
+                _note_user = st.text_input("Your name / initials", key="note_user",
+                                           placeholder="e.g. VP")
+                _note_text = st.text_area("Note", key="note_text", height=80)
+                if st.button("Save Note", key="note_save", type="primary"):
+                    if _note_text.strip():
+                        _notes_all = _load_notes()
+                        _tname = tool.get("tool_name", "")
+                        if _tname not in _notes_all:
+                            _notes_all[_tname] = []
+                        _notes_all[_tname].append({
+                            "user": _note_user.strip() or "Team",
+                            "note": _note_text.strip(),
+                            "ts":   _dt.now().strftime("%Y-%m-%d %H:%M"),
+                        })
+                        _save_notes(_notes_all)
+                        st.success("Note saved.")
+                        st.rerun()
+                    else:
+                        st.warning("Note cannot be empty.")
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 3 — TOOL FINDER

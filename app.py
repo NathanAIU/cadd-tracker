@@ -22,6 +22,36 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── Authentication gate ───────────────────────────────────────────────────────
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    _login_col = st.columns([1, 2, 1])[1]
+    with _login_col:
+        st.markdown(
+            '<div style="margin-top:5rem;background:#ffffff;border:1px solid #e5e7eb;'
+            'border-radius:14px;padding:2.5rem;box-shadow:0 4px 24px rgba(0,0,0,0.07);'
+            'text-align:center;">'
+            '<div style="font-size:1.6rem;font-weight:800;color:#1B3144;margin-bottom:0.3rem;">'
+            'CDDRi Internal</div>'
+            '<div style="font-size:0.9rem;color:#6b7280;line-height:1.6;margin-bottom:1.6rem;">'
+            'Computational Drug Discovery Resource Index<br>'
+            '<span style="font-size:0.8rem;">SciLifeLab · COMPIS</span></div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        _pwd = st.text_input("Team password", type="password",
+                             placeholder="Enter team password",
+                             label_visibility="collapsed")
+        if st.button("Sign In", use_container_width=True, type="primary"):
+            if _pwd == st.secrets.get("password", ""):
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("Incorrect password. Contact the team admin.")
+    st.stop()
+
 VERSION     = "v2.0"
 _NAVY       = "#1B3144"
 _DARK_TEAL  = "#045C64"
@@ -52,7 +82,8 @@ except Exception:
     _last_updated = "2025"
 
 # ── Section routing (URL query params keep back/forward working) ──────────────
-_VALID = {"home", "about", "docs", "api", "cite", "feedback", "pipeline", "tools"}
+_VALID = {"home", "about", "docs", "api", "cite", "feedback", "pipeline", "tools",
+          "our_stack", "admin"}
 _url_sec = st.query_params.get("section", "home")
 if _url_sec not in _VALID:
     _url_sec = "home"
@@ -265,11 +296,15 @@ _LOGO_BRAND = (
 
 # ── Left sidebar navigation ────────────────────────────────────────────────────
 _SIDEBAR_NAV = [
-    ("Home",                   "home"),
-    ("Drug Discovery Pipeline","pipeline"),
-    ("Method & Tools",         "tools"),
-    ("Documentation",          "docs"),
-    ("Feedback",               "feedback"),
+    ("Home",                    "home"),
+    ("Drug Discovery Pipeline", "pipeline"),
+    ("Method & Tools",          "tools"),
+    ("Documentation",           "docs"),
+    ("Feedback",                "feedback"),
+]
+_TEAM_NAV = [
+    ("Our Stack",   "our_stack"),
+    ("Admin Panel", "admin"),
 ]
 
 with st.sidebar:
@@ -300,6 +335,20 @@ with st.sidebar:
             st.query_params["section"] = _key
             st.rerun()
     st.markdown(
+        '<div style="padding:0.6rem 1rem 0.15rem;font-size:0.58rem;font-weight:700;'
+        'letter-spacing:0.14em;text-transform:uppercase;color:#4C979F;'
+        'border-top:1px solid rgba(76,151,159,0.18);margin-top:0.4rem;">Team</div>',
+        unsafe_allow_html=True,
+    )
+    for _label, _key in _TEAM_NAV:
+        _active = section == _key
+        if st.button(_label, key=f"sb_{_key}",
+                     type="primary" if _active else "secondary",
+                     width='stretch'):
+            st.session_state.section = _key
+            st.query_params["section"] = _key
+            st.rerun()
+    st.markdown(
         '<div style="margin:0.5rem 0 0;padding:0.8rem 1rem 0.7rem;'
         'border-top:1px solid rgba(76,151,159,0.18);">'
         '<div style="font-size:0.56rem;font-weight:700;letter-spacing:0.13em;'
@@ -308,6 +357,9 @@ with st.sidebar:
         '</div>',
         unsafe_allow_html=True,
     )
+    if st.button("Sign Out", key="sb_signout", type="secondary", width='stretch'):
+        st.session_state.authenticated = False
+        st.rerun()
 
 # ── Fixed header — compact dark two-line title, same on ALL pages ─────────────
 # Dark bg strip extends to left:0 (behind sidebar) for seamless full-width look.
@@ -335,10 +387,12 @@ st.markdown(_header_bg + _header_content, unsafe_allow_html=True)
 # ── Section heading merged with header-clearance spacer ───────────────────────
 # Title is anchored to the bottom of the spacer so no extra white gap appears.
 _section_headings = {
-    "pipeline": "Drug Discovery Pipeline",
-    "tools":    "Method & Tools",
-    "docs":     "Documentation",
-    "feedback": "Feedback",
+    "pipeline":  "Drug Discovery Pipeline",
+    "tools":     "Method & Tools",
+    "docs":      "Documentation",
+    "feedback":  "Feedback",
+    "our_stack": "Our Stack",
+    "admin":     "Admin Panel",
 }
 if section in _section_headings:
     st.markdown(
@@ -614,6 +668,74 @@ elif section == "pipeline":
 
 elif section == "tools":
     _render_tools()
+
+elif section == "our_stack":
+    _bm_file = Path(__file__).parent / "data" / "bookmarks.json"
+    _bm_data = json.loads(_bm_file.read_text()) if _bm_file.exists() else {"bookmarks": []}
+    _bookmarks = _bm_data.get("bookmarks", [])
+
+    _all_tools = json.loads(_tools_file.read_text()) if _tools_file.exists() else []
+    _stack = [t for t in _all_tools
+              if t.get("status", "approved") == "approved"
+              and t.get("tool_name", "") in _bookmarks]
+
+    if not _stack:
+        st.markdown("""
+<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;
+  padding:2rem;text-align:center;color:#6b7280;font-size:0.95rem;">
+  No tools bookmarked yet.<br>
+  <span style="font-size:0.85rem;">Go to <strong>Method &amp; Tools → Resource Detail</strong>
+  and click <strong>Add to Our Stack</strong> on any tool.</span>
+</div>
+""", unsafe_allow_html=True)
+    else:
+        st.markdown(
+            f'<div style="font-size:0.82rem;color:#6b7280;margin-bottom:1rem;">'
+            f'{len(_stack)} tool(s) in your team stack</div>',
+            unsafe_allow_html=True,
+        )
+        for _t in sorted(_stack, key=lambda x: x.get("tool_name", "")):
+            _doi_url = f"https://doi.org/{_t['doi']}" if _t.get("doi") else ""
+            _gh = _t.get("github", "")
+            _rtype = _t.get("resource_type", "")
+            st.markdown(f"""
+<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;
+  padding:1rem 1.25rem;margin-bottom:0.6rem;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+  <div style="font-size:1.05rem;font-weight:600;color:#1B3144;">{_t.get('tool_name','')}</div>
+  <div style="font-size:0.76rem;color:#6b7280;margin:0.15rem 0 0.5rem;">
+    {_t.get('authors','')} &nbsp;·&nbsp; {_t.get('journal','')} &nbsp;·&nbsp; {_t.get('year','')}
+  </div>
+  <div style="font-size:0.84rem;color:#374151;">{_t.get('key_features','')}</div>
+  <div style="margin-top:0.5rem;font-size:0.78rem;display:flex;gap:1rem;flex-wrap:wrap;">
+    {'<a href="' + _doi_url + '" target="_blank" style="color:#045C64;">Publication</a>' if _doi_url else ''}
+    {'<a href="' + _gh + '" target="_blank" style="color:#045C64;">GitHub</a>' if _gh else ''}
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+elif section == "admin":
+    _admin_authed = st.session_state.get("admin_authenticated", False)
+    if not _admin_authed:
+        st.markdown("""
+<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;
+  padding:0.75rem 1rem;font-size:0.85rem;color:#92400e;margin-bottom:1rem;">
+  Admin panel requires a separate admin password.
+</div>
+""", unsafe_allow_html=True)
+        _a_col = st.columns([1, 2, 1])[1]
+        with _a_col:
+            _apwd = st.text_input("Admin password", type="password",
+                                  placeholder="Enter admin password",
+                                  label_visibility="collapsed")
+            if st.button("Unlock Admin", use_container_width=True, type="primary"):
+                if _apwd == st.secrets.get("admin_password", ""):
+                    st.session_state.admin_authenticated = True
+                    st.rerun()
+                else:
+                    st.error("Incorrect admin password.")
+    else:
+        from views.admin import render as _render_admin
+        _render_admin()
 
 
 # ══════════════════════════════════════════════════════════════════════════════

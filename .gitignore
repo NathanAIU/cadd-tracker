@@ -6,6 +6,9 @@ __pycache__/
 data/tools.json.backup
 data/scan_history.json
 data/pageviews.json
+data/team_notes.json
+data/bookmarks.json
 LOGO.png
 SciLifeLab_symbol_green-2048x1950-2.png
 icon.png
+.streamlit/secrets.toml
